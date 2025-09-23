@@ -1,57 +1,93 @@
 import streamlit as st
 import google.generativeai as genai
-import pandas as pd 
+import pandas as pd
 import os
 
+# Configure API
 api = os.getenv("GOOGLE_API_KEY")
 genai.configure(api_key=api)
 model = genai.GenerativeModel("gemini-2.5-flash-lite")
 
-# Let's create the UI
-st.title(':orange[Healthify] : :blue[AI Powered Personal Health Assistant]')
-st.markdown('''#### This application will assist you to have a better and healthy life. your health realted questions and get Personalised guidence.''')
-tips = ''' Follow the Steps
-* Enter your details in the side bar.
-* Enter your gender, age, height (cms), weight (kgs).
-* Select the number on the fitness scale (0-5). 5-Fittest and 0-Not fittness at all.'''
-st.write(tips)
+# App Title
+st.title("🧑‍⚕️ :orange[Healthify] – :blue[AI Powered Personal Health Assistant]")
+st.markdown(
+    """
+    ### 🌱 Your AI partner for a healthier lifestyle  
+    This application helps you understand your health better and provides **personalized guidance**.  
+    """
+)
 
+# Sidebar for user details
+st.sidebar.header("📝 Enter Your Details")
+Name = st.sidebar.text_input("👤 Name")
+gender = st.sidebar.selectbox("⚧ Gender", ["Male", "Female", "Other"])
+age = st.sidebar.number_input("🎂 Age (Years)", min_value=1, max_value=120, step=1)
+height = st.sidebar.number_input("📏 Height (cm)", min_value=50, max_value=250, step=1)
+weight = st.sidebar.number_input("⚖️ Weight (kg)", min_value=10, max_value=250, step=1)
+fitness = st.sidebar.slider("💪 Fitness Level (0-5)", 0, 5, 3)
 
-st.sidebar.header(':red[Enter Your Details]')
-Name = st.sidebar.text_input('Enter Your Name')
-gender = st.sidebar.selectbox('Select Your gender', ['Male','Female','Other'])
-age = st.sidebar.text_input('Enter Your Age in Yrs')
-height = st.sidebar.text_input('Enter Your Height in Cms')
-weight = st.sidebar.text_input('Enter Your Weight in Kgs')
-fitness = st.sidebar.slider('Rate Your Fittness (0-5)', 0, 5, 3)
-bmi = pd.to_numeric(weight) / ((pd.to_numeric(height)/100) ** 2)
-st.sidebar.write(f'{Name} Your BMI: {round(bmi,2)} kg/m^2')
+# BMI Calculation
+if height > 0 and weight > 0:
+    bmi = weight / ((height / 100) ** 2)
+    st.sidebar.success(f"📊 {Name}, your BMI is **{round(bmi,2)} kg/m²**")
 
-# Let's Use GenAI Model to get the Output
-user_query = st.text_input('Enter Your Question Here')
-prompt = f'''Assume you are a Health Expert. You are Required to answer the question asked
-by the user. Use the Following Details provided by the user.
-name of user is {Name},
-gender is {gender},
-age is {age},
-height is {height} cms,
-weight is {weight} kgs,
-bmi is {bmi} kg/m^2,
-and user rates his/her fitness as {fitness} out of 5
+    # BMI category message
+    if bmi < 18.5:
+        st.sidebar.info("⚠️ You are underweight")
+    elif 18.5 <= bmi < 24.9:
+        st.sidebar.success("✅ You have a healthy weight")
+    elif 25 <= bmi < 29.9:
+        st.sidebar.warning("⚠️ You are overweight")
+    else:
+        st.sidebar.error("🚨 You fall in the obese range")
 
-Your output should be in the following format
-* It start by giving one two line comment on the details that have been provided.
-* It should explain what the real problem is based on the query asked by the user.
-* What could be the possible reason for the problem.
-* What are the possible solutions for the problem.
-* You can also mention what doctor to see (Specialization) if required.
-* Strickly do not recommend any medicine Even if asked.
-* output should be in bullet points and usetables wherever required
-* In the End Give me a 5 to 7 line of summary.
+# Tips section
+with st.expander("📌 How to use this assistant"):
+    st.markdown(
+        """
+        1. Fill in your **personal details** in the sidebar.  
+        2. Enter your **health-related question** below.  
+        3. Get **personalized, AI-powered advice** in seconds.  
+        """
+    )
 
-here is the query from the users {user_query}'''
+# User query
+user_query = st.text_input("💬 Enter your health question:")
 
+# Prompt to GenAI
+prompt = f"""
+Assume you are a Health Expert. Answer the question asked by the user using these details:
 
+- Name: {Name}
+- Gender: {gender}
+- Age: {age}
+- Height: {height} cm
+- Weight: {weight} kg
+- BMI: {round(bmi,2) if height > 0 else 'N/A'} kg/m²
+- Fitness Rating: {fitness}/5
+
+Format the response as:
+- A short personalized comment on the details provided.
+- Explain the core issue based on the query.
+- Possible reasons for the problem.
+- Suggested lifestyle/health solutions.
+- Which doctor (specialization) to see, if needed.
+- Strictly do not recommend any medicines.
+- Use bullet points and tables wherever required.
+- End with a 5–7 line summary.
+
+User query: {user_query}
+"""
+
+# Generate response
 if user_query:
     response = model.generate_content(prompt)
-    st.write(response.text)
+    st.subheader("🤖 Your Healthify Assistant’s Advice")
+    st.markdown(
+        f"""
+        <div style="background-color:#f9f9f9; padding:15px; border-radius:12px; border:1px solid #ddd;">
+        {response.text}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
